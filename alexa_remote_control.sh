@@ -79,6 +79,7 @@
 #               -lastalexa now returns this string. Make sure to put the device in double quotes!
 # 2022-02-04: v0.20d minor volume fix (write volume to volume cache when volume is changed)
 # 2022-06-29: v0.20e removed call to jq's strptime function, replaced with bash function using 'date' to convert to epoch
+# 2022-09-16: v0.21 removed unstable authentication methods
 #
 ###
 #
@@ -87,15 +88,8 @@
 # - (GNU) sed and awk for extraction
 # - jq as command line JSON parser (optional for the fancy bits)
 # - base64 for B64 encoding (make sure "-w 0" option is available on your platform)
-# - oathtool as OATH one-time password tool (optional for two-factor authentication)
 #
 ##########################################
-
-SET_EMAIL='amazon_account@email.address'
-SET_PASSWORD='Very_Secret_Amazon_Account_Password'
-SET_MFA_SECRET=''
-# something like:
-#  1234 5678 9ABC DEFG HIJK LMNO PQRS TUVW XYZ0 1234 5678 9ABC DEFG
 
 # this can be obtained by doing the device registration login flow
 #  e.g. from here: https://github.com/Apollon77/alexa-cookie/
@@ -156,9 +150,6 @@ SET_VOLMAXAGE="1"
 #
 
 # retrieving environment variables if any are set
-EMAIL=${EMAIL:-$SET_EMAIL}
-PASSWORD=${PASSWORD:-$SET_PASSWORD}
-MFA_SECRET=${MFA_SECRET:-$SET_MFA_SECRET}
 REFRESH_TOKEN=${REFRESH_TOKEN:-$SET_REFRESH_TOKEN}
 AMAZON=${AMAZON:-$SET_AMAZON}
 ALEXA=${ALEXA:-$SET_ALEXA}
@@ -249,7 +240,7 @@ usage()
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		--version)
-			echo "v0.20d"
+			echo "v0.21"
 			exit 0
 			;;
 		-d)
@@ -532,19 +523,11 @@ if [ -z "${REFRESH_TOKEN}" ] ; then
 	 -H "$(grep 'Location: ' ${TMP}/.alexa.header | sed 's/Location: /Referer: /')" -d "@${TMP}/.alexa.postdata" https://www.${AMAZON}/ap/signin | grep "hidden" | sed 's/hidden/\n/g' | grep "value=\"" | sed -r 's/^.*name="([^"]+)".*value="([^"]+)".*/\1=\2\&/g' > "${TMP}/.alexa.postdata2"
 
 	#
-	# add OTP if using MFA
-	#
-	if [ -n "${MFA_SECRET}" ] ; then
-		OTP=$(${OATHTOOL} -b --totp "${MFA_SECRET}")
-		PASSWORD="${PASSWORD}${OTP}"
-	fi
-
-	#
 	# login with filled out form
 	#  !!! referer now contains session in URL
 	#
 	${CURL} ${OPTS} -s -D "${TMP}/.alexa.header2" -c ${COOKIE} -b ${COOKIE} -A "${BROWSER}" -H "Accept-Language: ${LANGUAGE}" -H "DNT: 1" -H "Connection: keep-alive" -H "Upgrade-Insecure-Requests: 1" -L\
-	 -H "Referer: https://www.${AMAZON}/ap/signin/$(awk "\$0 ~/.${AMAZON}.*session-id[ \\s\\t]+/ {print \$7}" ${COOKIE})" --data-urlencode "email=${EMAIL}" --data-urlencode "password=${PASSWORD}" -d "@${TMP}/.alexa.postdata2" https://www.${AMAZON}/ap/signin > "${TMP}/.alexa.login"
+	 -H "Referer: https://www.${AMAZON}/ap/signin/$(awk "\$0 ~/.${AMAZON}.*session-id[ \\s\\t]+/ {print \$7}" ${COOKIE})" -d "@${TMP}/.alexa.postdata2" https://www.${AMAZON}/ap/signin > "${TMP}/.alexa.login"
 
 	# check whether the login has been successful or exit otherwise
 	if [ -z "$(grep 'Location: https://alexa.*html' ${TMP}/.alexa.header2)" ] ; then

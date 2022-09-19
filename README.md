@@ -62,8 +62,6 @@ alexa-remote-control [-d <device>|ALL] -e <pause|play|next|prev|fwd|rwd|shuffle|
    -h : help
 ```
 
-There's also a (NOW DEPRECATED) "plain" version, which lacks some functionality (-z, -i, -p, -P, -S and no radio station names and no routines) but doesn't require 'jq' for JSON processing.
-
 REFRESH_TOKEN
 ----
 The Alexa-App way of logging in is using a REFRESH_TOKEN which allows for obtaining the session cookies. This replaces EMAIL/PASSWORD/MFA so those will not be exposed in any scripts anymore. For convinience I created a binary, ready to run: https://github.com/adn77/alexa-cookie-cli

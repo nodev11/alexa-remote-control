@@ -81,7 +81,7 @@
 # 2022-06-29: v0.20e removed call to jq's strptime function, replaced with bash function using 'date' to convert to epoch
 # 2022-09-16: v0.21 removed unstable authentication methods
 # 2023-05-24: v0.22 fixed initial login page (thanks to Brian Rudy)
-# 2023-06-20: v0.23 removed function toEpoch()
+# 2023-06-20: v0.23 reverted changes from v0.20e
 #
 ###
 #

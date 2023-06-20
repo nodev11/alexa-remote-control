@@ -122,9 +122,6 @@ SET_OPTS='--compressed --http1.1'
 SET_BROWSER='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:1.0) bash-script/1.0'
 #SET_BROWSER='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0'
 
-# oathtool command line tool
-SET_OATHTOOL='/usr/bin/oathtool'
-
 # jq binary
 SET_JQ='/usr/bin/jq'
 
@@ -161,7 +158,6 @@ CURL=${CURL:-$SET_CURL}
 OPTS=${OPTS:-$SET_OPTS}
 TTS_LOCALE=${TTS_LOCALE:-$SET_TTS_LOCALE}
 TMP=${TMP:-$SET_TMP}
-OATHTOOL=${OATHTOOL:-$SET_OATHTOOL}
 JQ=${JQ:-$SET_JQ}
 SPEAKVOL=${SPEAKVOL:-$SET_SPEAKVOL}
 NORMALVOL=${NORMALVOL:-$SET_NORMALVOL}
@@ -538,11 +534,6 @@ if [ -z "${REFRESH_TOKEN}" ] ; then
 		echo " make sure to have all Amazon related cookies deleted and Javascript disabled!"
 		echo
 		echo " (For more information have a look at ${TMP}/.alexa.login)"
-		echo
-		echo " To avoid issues with captcha, try using Multi-Factor Authentication."
-		echo " To do so, first set up Two-Step Verification on your Amazon account, then"
-		echo " configure this script (or the environment) with your MFA secret."
-		echo " Support for Multi-Factor Authentication requires 'oathtool' to be installed."
 
 		rm -f ${COOKIE}
 		rm -f "${TMP}/.alexa.header"

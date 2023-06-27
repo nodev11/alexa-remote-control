@@ -80,6 +80,8 @@
 # 2022-02-04: v0.20d minor volume fix (write volume to volume cache when volume is changed)
 # 2022-06-29: v0.20e removed call to jq's strptime function, replaced with bash function using 'date' to convert to epoch
 # 2022-09-16: v0.21 removed unstable authentication methods
+# 2023-05-24: v0.22 fixed initial login page (thanks to Brian Rudy)
+# 2023-06-20: v0.23 reverted changes from v0.20e
 #
 ###
 #
@@ -120,9 +122,6 @@ SET_OPTS='--compressed --http1.1'
 SET_BROWSER='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:1.0) bash-script/1.0'
 #SET_BROWSER='Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0'
 
-# oathtool command line tool
-SET_OATHTOOL='/usr/bin/oathtool'
-
 # jq binary
 SET_JQ='/usr/bin/jq'
 
@@ -159,7 +158,6 @@ CURL=${CURL:-$SET_CURL}
 OPTS=${OPTS:-$SET_OPTS}
 TTS_LOCALE=${TTS_LOCALE:-$SET_TTS_LOCALE}
 TMP=${TMP:-$SET_TMP}
-OATHTOOL=${OATHTOOL:-$SET_OATHTOOL}
 JQ=${JQ:-$SET_JQ}
 SPEAKVOL=${SPEAKVOL:-$SET_SPEAKVOL}
 NORMALVOL=${NORMALVOL:-$SET_NORMALVOL}
@@ -240,7 +238,7 @@ usage()
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		--version)
-			echo "v0.21"
+			echo "v0.23"
 			exit 0
 			;;
 		-d)
@@ -514,7 +512,7 @@ if [ -z "${REFRESH_TOKEN}" ] ; then
 	# get first cookie and write redirection target into referer
 	#
 	${CURL} ${OPTS} -s -D "${TMP}/.alexa.header" -c ${COOKIE} -b ${COOKIE} -A "${BROWSER}" -H "Accept-Language: ${LANGUAGE}" -H "DNT: 1" -H "Connection: keep-alive" -H "Upgrade-Insecure-Requests: 1" -L\
-	 https://alexa.${AMAZON} | grep "hidden" | sed 's/hidden/\n/g' | grep "value=\"" | sed -r 's/^.*name="([^"]+)".*value="([^"]+)".*/\1=\2\&/g' > "${TMP}/.alexa.postdata"
+	 https://alexa.${AMAZON}/spa/index.html | grep "hidden" | sed 's/hidden/\n/g' | grep "value=\"" | sed -r 's/^.*name="([^"]+)".*value="([^"]+)".*/\1=\2\&/g' > "${TMP}/.alexa.postdata"
 
 	#
 	# login empty to generate session
@@ -536,11 +534,6 @@ if [ -z "${REFRESH_TOKEN}" ] ; then
 		echo " make sure to have all Amazon related cookies deleted and Javascript disabled!"
 		echo
 		echo " (For more information have a look at ${TMP}/.alexa.login)"
-		echo
-		echo " To avoid issues with captcha, try using Multi-Factor Authentication."
-		echo " To do so, first set up Two-Step Verification on your Amazon account, then"
-		echo " configure this script (or the environment) with your MFA secret."
-		echo " Support for Multi-Factor Authentication requires 'oathtool' to be installed."
 
 		rm -f ${COOKIE}
 		rm -f "${TMP}/.alexa.header"
@@ -556,26 +549,10 @@ if [ -z "${REFRESH_TOKEN}" ] ; then
 	rm -f "${TMP}/.alexa.postdata"
 	rm -f "${TMP}/.alexa.postdata2"
 else
-#	${CURL} ${OPTS} -s -X POST --data "app_name=Amazon%20Alexa&requested_token_type=auth_cookies&domain=www.${AMAZON}&source_token_type=refresh_token" --data-urlencode "source_token=${REFRESH_TOKEN}" -H "x-amzn-identity-auth-domain: api.${AMAZON}" https://api.${AMAZON}/ap/exchangetoken/cookies | ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | map_values(if . == true then "TRUE" elif . == false then "FALSE" else . end) | .Expires |= ( strptime("%d %b %Y %H:%M:%S %Z") | mktime ) | [(if .HttpOnly=="TRUE" then ("#HttpOnly_" + $domain) else $domain end), "TRUE", .Path, .Secure, .Expires, .Name, .Value] | @tsv' > ${COOKIE}
-
-	# workaround for cookies valid beyond 2038-01-19 on 32-bit systems
-	toEpoch() {
-		local x
-		while read x
-		do
-			echo "$x" | awk '{
-				if ($3 >= 2038) {
-					print "s/"$1" "$2" "$3" "$4" "$5"/2147483647/g"
-				} else {
-					print "s/"$1" "$2" "$3" "$4" "$5"/'"$(date -d "$x" -u +"%s")"'/g"
-				}
-			}'
-		done
-	}
-
+	# workaround for cookies valid beyond 2038-01-19 on 32bit systems
 	${CURL} ${OPTS} -s -X POST --data "app_name=Amazon%20Alexa&requested_token_type=auth_cookies&domain=www.${AMAZON}&source_token_type=refresh_token" --data-urlencode "source_token=${REFRESH_TOKEN}" -H "x-amzn-identity-auth-domain: api.${AMAZON}" https://api.${AMAZON}/ap/exchangetoken/cookies > ${COOKIE}.json
-	sed -e "$(cat ${COOKIE}.json | ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | .Expires' | toEpoch)" ${COOKIE}.json |\
-	 ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | map_values(if . == true then "TRUE" elif . == false then "FALSE" else . end) | [(if .HttpOnly=="TRUE" then ("#HttpOnly_" + $domain) else $domain end), "TRUE", .Path, .Secure, .Expires, .Name, .Value] | @tsv' > ${COOKIE}
+	sed -e "$(cat ${COOKIE}.json | ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | .Expires' | awk '$3 >= 2038 { print "s/"$1" "$2" "$3" "$4" "$5"/"$1" "$2" "2037" "$4" "$5"/g" ;}')" ${COOKIE}.json |\
+	 ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | map_values(if . == true then "TRUE" elif . == false then "FALSE" else . end) | .Expires |= ( strptime("%d %b %Y %H:%M:%S %Z") | mktime ) | [(if .HttpOnly=="TRUE" then ("#HttpOnly_" + $domain) else $domain end), "TRUE", .Path, .Secure, .Expires, .Name, .Value] | @tsv' > ${COOKIE}
 
 	if [ -z "$(grep "\.${AMAZON}.*\sat-" ${COOKIE})" ] ; then
 		echo "ERROR: cookie retrieval with refresh_token didn't work"

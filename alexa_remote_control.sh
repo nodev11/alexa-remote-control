@@ -82,6 +82,7 @@
 # 2022-09-16: v0.21 removed unstable authentication methods
 # 2023-05-24: v0.22 fixed initial login page (thanks to Brian Rudy)
 # 2023-06-20: v0.23 reverted changes from v0.20e
+# 2023-11-05: v0.23 updated the functions last_alexa() and last_command() (thanks to Ralf Mueller)
 #
 ###
 #
@@ -104,6 +105,9 @@ SET_TTS_LOCALE='de-DE'
 
 SET_AMAZON='amazon.de'
 #SET_AMAZON='amazon.com'
+
+SET_AMAZON_NEW_API='amazon.de/alexa-privacy/apd/rvh'  
+#New System Variable for Alexa History
 
 SET_ALEXA='alexa.amazon.de'
 #SET_ALEXA='pitangui.amazon.com'
@@ -151,6 +155,7 @@ SET_VOLMAXAGE="1"
 # retrieving environment variables if any are set
 REFRESH_TOKEN=${REFRESH_TOKEN:-$SET_REFRESH_TOKEN}
 AMAZON=${AMAZON:-$SET_AMAZON}
+AMAZON_NEW_API=${AMAZON_NEW_API:-$SET_AMAZON_NEW_API}
 ALEXA=${ALEXA:-$SET_ALEXA}
 LANGUAGE=${LANGUAGE:-$SET_LANGUAGE}
 BROWSER=${BROWSER:-$SET_BROWSER}
@@ -1152,30 +1157,35 @@ ${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep
 #
 # device that sent the last command
 # (by Markus Wennesheimer)
+# (updated by Ralf Mueller)
+# (updated by nodev11)
 #
 last_alexa()
 {
 ${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L\
- -H "Content-Type: application/json; charset=UTF-8" -H "Referer: https://alexa.${AMAZON}/spa/index.html" -H "Origin: https://alexa.${AMAZON}"\
+ -H "Content-Type: application/json; charset=UTF-8" -H "Referer: https://www.${AMAZON_NEW_API}" -H "Origin: https://www.${AMAZON}"\
  -H "csrf: $(awk "\$0 ~/.${AMAZON}.*csrf[ \\s\\t]+/ {print \$7}" ${COOKIE})" -X GET\
- "https://${ALEXA}/api/activities?startTime=&size=10&offset=1" | ${JQ} -r '[.activities[] | select( .activityStatus == "SUCCESS" )][0] | .sourceDeviceIds[0].serialNumber' | xargs -i grep -m 1 {} ${DEVLIST}.txt
+ "https://www.${AMAZON_NEW_API}/customer-history-records?startTime=$(($(date +%s)-86400))&endTime=$(($(date +%s)+86400))&recordType="VOICE_HISTORY"&maxRecordSize=1" | ${JQ} -r '[.customerHistoryRecords[] | select(.recordType == "VOICE_HISTORY" ) | select(.utteranceType == "GENERAL") | .device[]] | values[0]' 
 }
 
 #
 # last command or last command of a specific device
 # (by Trinitus01)
+# (updated by Ralf Mueller)
+# (updated by nodev11)
 #
 last_command()
 {
-SERIALNUMBER=$(${JQ} -r --arg device "$DEVICE" '.devices[] | select( .accountName == $device ) | .serialNumber' ${DEVLIST}.json)
+																																										  
 ACTIVITIES=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L\
- -H "Content-Type: application/json; charset=UTF-8" -H "Referer: https://alexa.${AMAZON}/spa/index.html" -H "Origin: https://alexa.${AMAZON}"\
+ -H "Content-Type: application/json; charset=UTF-8" -H "Referer: https://www.${AMAZON_NEW_API}" -H "Origin: https://www.${AMAZON}"\
  -H "csrf: $(awk "\$0 ~/.${AMAZON}.*csrf[ \\s\\t]+/ {print \$7}" ${COOKIE})" -X GET\
- "https://${ALEXA}/api/activities?startTime=&size=10&offset=1")
+ "https://www.${AMAZON_NEW_API}/customer-history-records?startTime=$(($(date +%s)-86400))&endTime=$(($(date +%s)+86400))&recordType="VOICE_HISTORY"&maxRecordSize=10")
+ 
 if [ -z "$DEVICE" ] ; then
-	echo "$ACTIVITIES" | ${JQ} -r '[.activities[] | select( .activityStatus == "SUCCESS" )][0] | .description' | ${JQ} -r .summary
+	echo "$ACTIVITIES" | ${JQ} -r '[.customerHistoryRecords[] | select(.recordType == "VOICE_HISTORY" ) | select(.voiceHistoryRecordItems[].recordItemType == "CUSTOMER_TRANSCRIPT" ) | .voiceHistoryRecordItems[].transcriptText] | values[0]'
 else
-	echo "$ACTIVITIES" | ${JQ} -r --arg serialnumber "$SERIALNUMBER" '[.activities[] | select( .activityStatus == "SUCCESS" ) | select( .sourceDeviceIds[].serialNumber == $serialnumber)][0] | .description' | ${JQ} -r .summary
+	echo "$ACTIVITIES" | ${JQ} -r --arg jqdevice "$DEVICE" '[.customerHistoryRecords[] | select(.recordType == "VOICE_HISTORY" ) | select(.device[] == $jqdevice) | select(.voiceHistoryRecordItems[].recordItemType == "CUSTOMER_TRANSCRIPT" ) | .voiceHistoryRecordItems[].transcriptText] | values[0]'
 fi
 }
 

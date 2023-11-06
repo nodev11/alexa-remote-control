@@ -82,7 +82,7 @@
 # 2022-09-16: v0.21 removed unstable authentication methods
 # 2023-05-24: v0.22 fixed initial login page (thanks to Brian Rudy)
 # 2023-06-20: v0.23 reverted changes from v0.20e
-# 2023-11-05: v0.23 updated the functions last_alexa() and last_command() (thanks to Ralf Mueller)
+# 2023-11-06: v0.24 updated the functions last_alexa() and last_command() (thanks to Ralf Mueller)
 #
 ###
 #
@@ -243,7 +243,7 @@ usage()
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		--version)
-			echo "v0.23"
+			echo "v0.24"
 			exit 0
 			;;
 		-d)

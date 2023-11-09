@@ -79,10 +79,10 @@
 #               -lastalexa now returns this string. Make sure to put the device in double quotes!
 # 2022-02-04: v0.20d minor volume fix (write volume to volume cache when volume is changed)
 # 2022-06-29: v0.20e removed call to jq's strptime function, replaced with bash function using 'date' to convert to epoch
-# 2022-09-16: v0.21 removed unstable authentication methods
-# 2023-05-24: v0.22 fixed initial login page (thanks to Brian Rudy)
-# 2023-06-20: v0.23 reverted changes from v0.20e
-# 2023-11-06: v0.24 updated the functions last_alexa() and last_command() (thanks to Ralf Mueller)
+# 2022-09-16: v0.21-nd11 removed unstable authentication methods
+# 2023-05-24: v0.22-nd11 fixed initial login page (thanks to Brian Rudy)
+# 2023-06-20: v0.23-nd11 reverted changes from v0.20e
+# 2023-11-06: v0.24-nd11 updated the functions last_alexa() and last_command() (thanks to Ralf Mueller)
 #
 ###
 #
@@ -243,7 +243,7 @@ usage()
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		--version)
-			echo "v0.24"
+			echo "v0.24-nd11"
 			exit 0
 			;;
 		-d)

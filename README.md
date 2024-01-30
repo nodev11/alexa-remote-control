@@ -20,10 +20,6 @@ DEVICEVOLNORMAL - a list of normal volume levels- matching the devices above
                   (current playing volume takes precedence for normal volume)
 REFRESH_TOKEN - the new preference over EMAIL/PASSWORD can be obtained here: https://github.com/adn77/alexa-cookie-cli
 ```
-You will very likely want to set the language to:
-```
-export LANGUAGE='de,en-US;q=0.7,en;q=0.3'
-```
 
 ```
 alexa-remote-control [-d <device>|ALL] -e <pause|play|next|prev|fwd|rwd|shuffle|repeat|vol:<0-100>> |

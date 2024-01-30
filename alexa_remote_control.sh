@@ -82,6 +82,7 @@
 # 2024-01-29: v0.21 removed legacy login methods as they were no longer working
 #                   implemented new API calls for -lastalexa and -lastcommand
 #                   there is now an OS-type switch that hopefully handles OSX and BSD date creation
+# 2024-01-30: v0.21-nd11 reverted changes from v0.20e
 #
 ###
 #
@@ -533,8 +534,8 @@ else
 	}
 
 	${CURL} ${OPTS} -s -X POST --data "app_name=Amazon%20Alexa&requested_token_type=auth_cookies&domain=www.${AMAZON}&source_token_type=refresh_token" --data-urlencode "source_token=${REFRESH_TOKEN}" -H "x-amzn-identity-auth-domain: api.${AMAZON}" https://api.${AMAZON}/ap/exchangetoken/cookies > ${COOKIE}.json
-	sed -e "$(cat ${COOKIE}.json | ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | .Expires' | toEpoch)" ${COOKIE}.json |\
-	 ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | map_values(if . == true then "TRUE" elif . == false then "FALSE" else . end) | [(if .HttpOnly=="TRUE" then ("#HttpOnly_" + $domain) else $domain end), "TRUE", .Path, .Secure, .Expires, .Name, .Value] | @tsv' > ${COOKIE}
+	sed -e "$(cat ${COOKIE}.json | ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | .Expires' | awk '$3 >= 2038 { print "s/"$1" "$2" "$3" "$4" "$5"/"$1" "$2" "2037" "$4" "$5"/g" ;}')" ${COOKIE}.json |\
+	 ${JQ} -r '.response.tokens.cookies | to_entries[] | .key as $domain | .value[] | map_values(if . == true then "TRUE" elif . == false then "FALSE" else . end) | .Expires |= ( strptime("%d %b %Y %H:%M:%S %Z") | mktime ) | [(if .HttpOnly=="TRUE" then ("#HttpOnly_" + $domain) else $domain end), "TRUE", .Path, .Secure, .Expires, .Name, .Value] | @tsv' > ${COOKIE}
 
 	if [ -z "$(grep "\.${AMAZON}.*\sat-" ${COOKIE})" ] ; then
 		echo "ERROR: cookie retrieval with refresh_token didn't work"

@@ -86,7 +86,7 @@
 # 2024-02-01: v0.21b changed the output of -lastalexa back to the output of devicelist.txt
 # 2024-04-06: v0.22 changed the date calculation once again, now the date processing ignores the actual cookie validity
 #                    and simply sets it to "now + COOKIE_LIFETIME"
-# 2025-11-07: v0.23 add patch from ldrolez to fix login problem
+# 2025-11-07: v0.23 add ldrolez's patch to fix login problem
 #
 ###
 #

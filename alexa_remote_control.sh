@@ -240,7 +240,7 @@ usage()
 while [ "$#" -gt 0 ] ; do
 	case "$1" in
 		--version)
-			echo "v0.22"
+			echo "v0.23"
 			exit 0
 			;;
 		-d)

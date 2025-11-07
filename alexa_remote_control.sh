@@ -573,7 +573,6 @@ check_status()
 #  returns among other the current authentication state
 #
 	AUTHSTATUS=$(${CURL} ${OPTS} -s -b ${COOKIE} -o /dev/null -s -w "%{http_code}" -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/customer-status)
-	echo $AUTHSTATUS
 	MEDIAOWNERCUSTOMERID=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L "https://${ALEXA}/api/users/me?platform=ios&version=2.2.651540.0" | jq -r .id)
 
 	if [ "$AUTHSTATUS" != "401" ] ; then

@@ -571,14 +571,13 @@ check_status()
 # bootstrap with GUI-Version writes GUI version to cookie
 #  returns among other the current authentication state
 #
-	AUTHSTATUS=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/bootstrap?version=${GUIVERSION})
-	MEDIAOWNERCUSTOMERID=$(echo $AUTHSTATUS | sed -r 's/^.*"customerId":"([^,]+)",.*$/\1/g')
-	AUTHSTATUS=$(echo $AUTHSTATUS | sed -r 's/^.*"authenticated":([^,]+),.*$/\1/g')
+	AUTHSTATUS=$(${CURL} ${OPTS} -s -b ${COOKIE} -o /dev/null -s -w "%{http_code}" -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/customer-status)
+	echo $AUTHSTATUS
+	MEDIAOWNERCUSTOMERID=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L "https://${ALEXA}/api/users/me?platform=ios&version=2.2.651540.0" | jq -r .id)
 
-	if [ "$AUTHSTATUS" = "true" ] ; then
+	if [ "$AUTHSTATUS" != "401" ] ; then
 		return 1
 	fi
-
 	return 0
 }
 

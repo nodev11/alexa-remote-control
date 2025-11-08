@@ -86,7 +86,8 @@
 # 2024-02-01: v0.21b changed the output of -lastalexa back to the output of devicelist.txt
 # 2024-04-06: v0.22 changed the date calculation once again, now the date processing ignores the actual cookie validity
 #                    and simply sets it to "now + COOKIE_LIFETIME"
-# 2025-11-07: v0.23 added ldrolez's patch to fix login problem
+# 2025-11-07: v0.23 /api/bootstrap is gone, switched to /api/customer-status 
+#				(thanks once again to Ingo Fischer)
 #
 ###
 #
@@ -170,8 +171,6 @@ DEVICEVOLNORMAL=${DEVICEVOLNORMAL:-$SET_DEVICEVOLNORMAL}
 COOKIE="${TMP}/.alexa.cookie"
 DEVLIST="${TMP}/.alexa.devicelist"
 COOKIE_LIFETIME=$(( 24 * 60 * 60 )) # default lifetime of one day before revalidation
-
-GUIVERSION=0
 
 LIST=""
 LOGOFF=""
@@ -569,15 +568,22 @@ get_devlist()
 check_status()
 {
 #
-# returns the current authentication state
+#  returns the current authentication state (HTTP/200)
 #
-	AUTHSTATUS=$(${CURL} ${OPTS} -s -b ${COOKIE} -o /dev/null -s -w "%{http_code}" -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/customer-status)
-	MEDIAOWNERCUSTOMERID=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L "https://${ALEXA}/api/users/me?platform=ios&version=2.2.651540.0" | jq -r .id)
+	AUTHSTATUS=$(${CURL} ${OPTS} -s -w "%{http_code}" -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/customer-status -o ${TMP}/.alexa.authstatus.json)
 
-	if [ "$AUTHSTATUS" != "401" ] ; then
-		return 1
-	fi
-	return 0
+	case $AUTHSTATUS in
+		200)
+			MEDIAOWNERCUSTOMERID=$(${CURL} ${OPTS} -s -b ${COOKIE} -A "${BROWSER}" -H "DNT: 1" -H "Connection: keep-alive" -L https://${ALEXA}/api/users/me | ${JQ} -r '.id')
+			return 1
+			;;
+		401|403)
+			return 0
+			;;
+		*)
+			;;
+	esac
+	echo "ERROR: /api/customer-status returned unexpected HTTP/${AUTHSTATUS}"
 }
 
 #
